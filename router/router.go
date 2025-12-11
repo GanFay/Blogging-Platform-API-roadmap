@@ -6,8 +6,9 @@ import (
 	"github.com/gin-gonic/gin"
 )
 
-func SetupRouter() *gin.Engine {
+func SetupRouter(h *handlers.Handler) *gin.Engine {
 	r := gin.Default()
-	r.GET("/ping", handlers.Ping)
+	r.GET("/ping", h.Ping)
+	r.POST("/create", h.CreateBlog)
 	return r
 }

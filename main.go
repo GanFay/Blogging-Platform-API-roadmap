@@ -1,6 +1,7 @@
 package main
 
 import (
+	"blog/handlers"
 	"blog/router"
 	"context"
 	"log"
@@ -30,7 +31,7 @@ func main() {
 	_, err = pool.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS posts (
 					id         SERIAL PRIMARY KEY,
-					title      TEXT        NOT NULL,
+					title      TEXT UNIQUE NOT NULL,
 					content    TEXT        NOT NULL,
 					category   TEXT,
 					tags TEXT[],
@@ -42,6 +43,10 @@ func main() {
 	}
 	log.Println("Table posts is ready")
 
-	r := router.SetupRouter()
-	r.Run(":8080")
+	h := handlers.NewHandler(pool)
+	r := router.SetupRouter(h)
+	err = r.Run(":8080")
+	if err != nil {
+		return
+	}
 }
