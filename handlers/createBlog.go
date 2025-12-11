@@ -26,9 +26,9 @@ func (h *Handler) CreateBlog(c *gin.Context) {
 		VALUES ($1, $2, $3, $4)
 	`, newBlog.Title, newBlog.Content, newBlog.Category, newBlog.Tags)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "Failed to create blog: " + err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to create blog: " + err.Error()})
 		return
 	}
 
-	c.JSON(http.StatusCreated, gin.H{"message": "Blog created successfully"})
+	c.JSON(http.StatusCreated, gin.H{"message": "post created successfully"})
 }

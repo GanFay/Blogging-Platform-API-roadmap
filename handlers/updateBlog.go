@@ -13,7 +13,7 @@ func (h *Handler) UpdateBlog(c *gin.Context) {
 
 	id, err := strconv.Atoi(idstr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Invalid id: " + idstr})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id: " + idstr})
 	}
 
 	var newBlog Blog
@@ -26,12 +26,12 @@ func (h *Handler) UpdateBlog(c *gin.Context) {
 	cmdTag, err := h.DB.Exec(c.Request.Context(), `
 	UPDATE posts SET title=$1, content=$2, category=$3, tags=$4, updated_at=$6 WHERE id=$5`, newBlog.Title, newBlog.Content, newBlog.Category, newBlog.Tags, id, timeNow)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "Failed to update blog: " + err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to update post: " + err.Error()})
 		return
 	}
 	if cmdTag.RowsAffected() == 0 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "post not found"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "Successfully updated blog!"})
+	c.JSON(http.StatusOK, gin.H{"message": "successfully updated blog!"})
 }

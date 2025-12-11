@@ -9,7 +9,8 @@ import (
 func SetupRouter(h *handlers.Handler) *gin.Engine {
 	r := gin.Default()
 	r.GET("/ping", h.Ping)
-	r.POST("/blog", h.CreateBlog)
-	r.PUT("/blog/:id", h.UpdateBlog)
+	r.POST("/posts", h.CreateBlog)
+	r.PUT("/posts/:id", h.UpdateBlog)
+	r.DELETE("/posts/:id", h.DeleteBlog)
 	return r
 }
