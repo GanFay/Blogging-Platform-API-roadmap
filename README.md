@@ -22,6 +22,7 @@ You must provide JSON with post information.
 ```
 ## ✏️ PUT /posts/<id>
 Update an existing post.
+
 You must provide updated JSON.
 
 ### Example JSON
@@ -37,8 +38,10 @@ You must provide updated JSON.
 Delete a post by ID.
 
 ## 🍷GET /posts/:id
-U can get all posts 
+U can get all posts
+
 (if u want find post by ID use :id. example: /posts/5)
+
 (if u want find post by key(name or title or category) use ?term=. Example /posts?term="First%20blog")
 
 ## 📎 Project Source
