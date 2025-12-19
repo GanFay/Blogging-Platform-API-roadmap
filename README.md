@@ -33,11 +33,13 @@ You must provide updated JSON.
   "tags": ["first", "default", "blog"]
 }
 ```
-## ❌ DELETE /posts/<id>
+## ❌ DELETE /posts/:id
 Delete a post by ID.
 
-## 🚧 In Development
-More functionality is being worked on.
+## 🍷GET /posts/:id
+U can get all posts 
+(if u want find post by ID use :id. example: /posts/5)
+(if u want find post by key(name or title or category) use ?term=. Example /posts?term="First%20blog")
 
 ## 📎 Project Source
 https://roadmap.sh/projects/blogging-platform-api
