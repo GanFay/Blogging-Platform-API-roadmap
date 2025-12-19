@@ -12,5 +12,7 @@ func SetupRouter(h *handlers.Handler) *gin.Engine {
 	r.POST("/posts", h.CreateBlog)
 	r.PUT("/posts/:id", h.UpdateBlog)
 	r.DELETE("/posts/:id", h.DeleteBlog)
+	r.GET("/posts", h.GetAllPosts)
+	r.GET("/posts/:id", h.GetPoID)
 	return r
 }

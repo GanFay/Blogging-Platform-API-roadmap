@@ -1,7 +1,10 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <project version="4">
   <component name="SqlDialectMappings">
+    <file url="file://$PROJECT_DIR$/handlers/GetAllPosts.go" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/handlers/GetPoID.go" dialect="GenericSQL" />
     <file url="file://$PROJECT_DIR$/handlers/createBlog.go" dialect="GenericSQL" />
+    <file url="file://$PROJECT_DIR$/handlers/deleteBlog.go" dialect="GenericSQL" />
     <file url="file://$PROJECT_DIR$/handlers/updateBlog.go" dialect="GenericSQL" />
     <file url="file://$PROJECT_DIR$/main.go" dialect="GenericSQL" />
   </component>
