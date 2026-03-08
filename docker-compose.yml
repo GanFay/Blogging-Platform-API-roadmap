@@ -6,9 +6,9 @@ services:
     container_name: my_postgres
     restart: unless-stopped
     environment:
-      POSTGRES_USER: nigger
-      POSTGRES_PASSWORD: admin
-      POSTGRES_DB: mydb
+      POSTGRES_USER: ${PG_USER}
+      POSTGRES_PASSWORD: ${PG_PASSWORD}
+      POSTGRES_DB: ${PG_DB}
     ports:
       - "5432:5432"
     volumes:
