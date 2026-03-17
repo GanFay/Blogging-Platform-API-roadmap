@@ -5,6 +5,7 @@ import (
 	"blog/models"
 	"log"
 	"net/http"
+	"net/mail"
 
 	"github.com/gin-gonic/gin"
 )
@@ -44,7 +45,7 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 	if !auth.ComparePasswords(user.PasswordHash, req.Password) {
-		c.JSON(401, gin.H{"error": "wrong password"})
+		c.JSON(401, gin.H{"error": "password error"})
 		return
 	}
 
@@ -97,13 +98,23 @@ func (h *Handler) Register(c *gin.Context) {
 	}
 
 	if len(req.Username) < 4 || len(req.Username) > 32 {
-		c.JSON(400, gin.H{"error": "username is too short or too long"})
+		c.JSON(400, gin.H{"error": "username must be between 4 and 32 characters"})
 		return
-	} else if len(req.Password) < 5 || len(req.Password) > 128 {
-		c.JSON(400, gin.H{"error": "password is too short or too long"})
+	}
+
+	if len(req.Password) < 5 || len(req.Password) > 128 {
+		c.JSON(400, gin.H{"error": "password must be between 5 and 128 characters"})
 		return
-	} else if len(req.Email) < 6 || len(req.Email) > 256 {
-		c.JSON(400, gin.H{"error": "email is too short or too long"})
+	}
+
+	if len(req.Email) < 6 || len(req.Email) > 256 {
+		c.JSON(400, gin.H{"error": "email must be between 6 and 256 characters"})
+		return
+	}
+
+	_, err = mail.ParseAddress(req.Email)
+	if err != nil {
+		c.JSON(400, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -118,7 +129,7 @@ func (h *Handler) Register(c *gin.Context) {
 		VALUES ($1, $2, $3)
 	`, req.Username, req.Email, hashPassword)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(409, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"message": "register successfully"})

@@ -12,7 +12,7 @@ import (
 	"github.com/golang-jwt/jwt/v5"
 )
 
-var userID = 5
+var MuserID = 5
 
 func TestAuthMiddleware_MissingHeader(t *testing.T) {
 	h, r, pool := setupTest(t)
@@ -30,7 +30,7 @@ func TestAuthMiddleware_InvalidHeaderFormat(t *testing.T) {
 	defer pool.Close()
 	r.GET("/ping", h.AuthMiddleware(), h.Ping)
 	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
-	BearerToken, err := auth.GenerateAccessJWT(userID)
+	BearerToken, err := auth.GenerateAccessJWT(MuserID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -93,7 +93,7 @@ func TestAuthMiddleware_ExpiredToken(t *testing.T) {
 		return signedToken, nil
 	}
 
-	token, err := JWTFunc(userID)
+	token, err := JWTFunc(MuserID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -112,7 +112,7 @@ func TestAuthMiddleware_ValidToken(t *testing.T) {
 	defer pool.Close()
 	r.GET("/ping", h.AuthMiddleware(), h.Ping)
 	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
-	BearerToken, err := auth.GenerateAccessJWT(userID)
+	BearerToken, err := auth.GenerateAccessJWT(MuserID)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -141,7 +141,7 @@ func TestAuthMiddleware_SetsUserIDInContext(t *testing.T) {
 			return
 		}
 
-		if id != userID {
+		if id != MuserID {
 			c.Status(http.StatusInternalServerError)
 			return
 		}
@@ -150,7 +150,7 @@ func TestAuthMiddleware_SetsUserIDInContext(t *testing.T) {
 	})
 
 	req := httptest.NewRequest(http.MethodGet, "/check", nil)
-	BearerToken, err := auth.GenerateAccessJWT(userID)
+	BearerToken, err := auth.GenerateAccessJWT(MuserID)
 	if err != nil {
 		t.Fatal(err)
 	}
