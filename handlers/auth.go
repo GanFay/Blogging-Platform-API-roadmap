@@ -93,7 +93,7 @@ func (h *Handler) Register(c *gin.Context) {
 	var req models.RegisterRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(400, gin.H{"error": err.Error() + "awda"})
 		return
 	}
 
@@ -114,13 +114,13 @@ func (h *Handler) Register(c *gin.Context) {
 
 	_, err = mail.ParseAddress(req.Email)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(400, gin.H{"error": err.Error() + "222"})
 		return
 	}
 
 	hashPassword, err := auth.HashPassword(req.Password)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error()})
+		c.JSON(400, gin.H{"error": err.Error() + "333"})
 		return
 	}
 
@@ -129,7 +129,7 @@ func (h *Handler) Register(c *gin.Context) {
 		VALUES ($1, $2, $3)
 	`, req.Username, req.Email, hashPassword)
 	if err != nil {
-		c.JSON(409, gin.H{"error": err.Error()})
+		c.JSON(409, gin.H{"error": err.Error() + "444"})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"message": "register successfully"})

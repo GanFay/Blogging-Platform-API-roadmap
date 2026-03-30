@@ -15,8 +15,8 @@ import (
 // @Summary Create a new blog post
 // @Description Creates a new blog post for the authenticated user
 // @Tags posts
-// @Accept JSON
-// @Produce JSON
+// @Accept json
+// @Produce json
 // @Security BearerAuth
 // @Param input body models.Blog true "Blog data"
 // @Success 201 {object} map[string]string "Post created successfully"
@@ -62,8 +62,8 @@ func (h *Handler) CreatePost(c *gin.Context) {
 // @Summary Get all posts
 // @Description Returns a list of posts with optional search by term and pagination
 // @Tags posts
-// @Accept JSON
-// @Produce JSON
+// @Accept json
+// @Produce json
 // @Param term query string false "Search term for title, content, or category"
 // @Param limit query int false "Number of posts to return" default(10)
 // @Param offset query int false "Number of posts to skip" default(0)
@@ -133,8 +133,8 @@ func (h *Handler) GetPosts(c *gin.Context) {
 // @Summary Get post by ID
 // @Description Returns a single post by its ID
 // @Tags posts
-// @Accept JSON
-// @Produce JSON
+// @Accept json
+// @Produce json
 // @Param id path int true "Post ID"
 // @Success 200 {object} map[string]interface{} "Post found"
 // @Failure 400 {object} map[string]string "Invalid post ID"
@@ -161,8 +161,8 @@ func (h *Handler) GetByID(c *gin.Context) {
 // @Summary Delete blog post
 // @Description Deletes a post if the authenticated user is its author
 // @Tags posts
-// @Accept JSON
-// @Produce JSON
+// @Accept json
+// @Produce json
 // @Security BearerAuth
 // @Param id path int true "Post ID"
 // @Success 204 {object} map[string]string "Post deleted successfully"
@@ -217,8 +217,8 @@ func (h *Handler) DeletePost(c *gin.Context) {
 // @Summary Update blog post
 // @Description Updates a post if the authenticated user is its author
 // @Tags posts
-// @Accept JSON
-// @Produce JSON
+// @Accept json
+// @Produce json
 // @Security BearerAuth
 // @Param id path int true "Post ID"
 // @Param input body models.Blog true "Updated blog data"

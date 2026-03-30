@@ -359,7 +359,7 @@ func TestLogin_Success(t *testing.T) {
 		t.Fatalf("status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
 	}
 
-	resp := decodeJSON[models.TestLoginResponse](t, w)
+	resp := decodeJSON[models.LoginResponse](t, w)
 
 	userIDAccessJWT, err := auth.ParseJWTAccess(resp.AccessToken)
 	if err != nil {

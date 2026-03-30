@@ -21,7 +21,13 @@ type RegisterRequest struct {
 	Password string `json:"password" binding:"required"`
 }
 
-type TestLoginResponse struct {
+type LoginResponse struct {
 	UserId      int    `json:"userId" binding:"required"`
 	AccessToken string `json:"access_token" binding:"required"`
+}
+
+type MeResponse struct {
+	Username string `json:"username"`
+	ID       int    `json:"id"`
+	Email    string `json:"email"`
 }

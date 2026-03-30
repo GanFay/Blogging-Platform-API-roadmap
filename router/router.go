@@ -21,11 +21,11 @@ func SetupRouter(h *handlers.Handler) *gin.Engine {
 
 	authGroup := r.Group("/")
 	authGroup.Use(h.AuthMiddleware())
-	authGroup.POST("/posts", h.CreateBlog)
-	authGroup.PUT("/posts/:id", h.UpdateBlog)
-	authGroup.DELETE("/posts/:id", h.DeleteBlog)
-	authGroup.GET("/posts", h.GetAllPosts)
-	authGroup.GET("/posts/:id", h.GetPoID)
+	authGroup.POST("/posts", h.CreatePost)
+	authGroup.PUT("/posts/:id", h.UpdatePost)
+	authGroup.DELETE("/posts/:id", h.DeletePost)
+	authGroup.GET("/posts", h.GetPosts)
+	authGroup.GET("/posts/:id", h.GetByID)
 
 	authGroup.GET("/users/me", h.Me)
 
