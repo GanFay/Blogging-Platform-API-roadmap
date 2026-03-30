@@ -179,8 +179,12 @@ func (h *Handler) DeleteBlog(c *gin.Context) {
 	}
 	var post models.Post
 	id := c.Param("id")
-
-	err := h.DB.QueryRow(c.Request.Context(), `SELECT * FROM posts WHERE id=$1`, id).Scan(&post.ID, &post.AuthorID, &post.Title, &post.Content, &post.Category, &post.Tags, &post.CreatedAt, &post.UpdatedAt)
+	idInt, err := strconv.Atoi(id)
+	if err != nil {
+		c.JSON(400, gin.H{"error": "invalid id: " + id})
+		return
+	}
+	err = h.DB.QueryRow(c.Request.Context(), `SELECT * FROM posts WHERE id=$1`, idInt).Scan(&post.ID, &post.AuthorID, &post.Title, &post.Content, &post.Category, &post.Tags, &post.CreatedAt, &post.UpdatedAt)
 	if err != nil {
 		log.Println(err)
 		c.JSON(400, gin.H{"error": err.Error()})
@@ -191,7 +195,7 @@ func (h *Handler) DeleteBlog(c *gin.Context) {
 		return
 	}
 	if authorID != userID.(int) {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "not permission"})
+		c.JSON(http.StatusForbidden, gin.H{"message": "not permission"})
 		return
 	}
 
