@@ -84,7 +84,8 @@ func (h *Handler) GetAllPosts(c *gin.Context) {
 
 	intLimit, err := strconv.Atoi(limit)
 	if err != nil {
-		c.JSON(http.StatusBadGateway, gin.H{"error": err.Error()})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "limit must be int"})
+		return
 	}
 	if intLimit > 99 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "limit is too big"})
@@ -143,14 +144,17 @@ func (h *Handler) GetPoID(c *gin.Context) {
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id: " + idStr})
+		return
 	}
 	var post models.Post
+	var posts []models.Post
 	err = h.DB.QueryRow(c.Request.Context(), `SELECT * FROM posts WHERE id=$1`, id).Scan(&post.ID, &post.AuthorID, &post.Title, &post.Content, &post.Category, &post.Tags, &post.CreatedAt, &post.UpdatedAt)
 	if err != nil {
-		log.Println(err)
-		c.JSON(400, gin.H{"error": "invalid id: " + idStr})
+		c.JSON(404, gin.H{"error": "user not found: " + idStr})
+		return
 	}
-	c.JSON(http.StatusOK, gin.H{"post": post})
+	posts = append(posts, post)
+	c.JSON(http.StatusOK, gin.H{"posts": posts})
 }
 
 // DeleteBlog GoDoc
@@ -227,7 +231,8 @@ func (h *Handler) UpdateBlog(c *gin.Context) {
 	}
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id: " + idStr})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id " + idStr})
+		return
 	}
 	var post models.Post
 	err = h.DB.QueryRow(c.Request.Context(), `SELECT * FROM posts WHERE id=$1`, id).Scan(&post.ID, &post.AuthorID, &post.Title, &post.Content, &post.Category, &post.Tags, &post.CreatedAt, &post.UpdatedAt)
@@ -244,7 +249,7 @@ func (h *Handler) UpdateBlog(c *gin.Context) {
 	}
 
 	if AtoI != userID {
-		c.JSON(http.StatusUnauthorized, gin.H{"message": "not permission"})
+		c.JSON(http.StatusForbidden, gin.H{"message": "not permission"})
 		return
 	}
 
@@ -252,6 +257,7 @@ func (h *Handler) UpdateBlog(c *gin.Context) {
 	err = c.ShouldBindJSON(&newBlog)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
+		return
 	}
 	timeNow := time.Now()
 
