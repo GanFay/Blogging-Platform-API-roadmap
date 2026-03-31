@@ -125,7 +125,7 @@ func TestUpdatePosts_Valid(t *testing.T) {
 			}
 			switch testCase.wantBodyErr {
 			case "":
-				if resp["message"] != "successfully updated blog!" {
+				if resp["message"] != "successfully updated post" {
 					t.Fatal("want: successfully updated, got: ", resp["message"])
 				}
 			default:

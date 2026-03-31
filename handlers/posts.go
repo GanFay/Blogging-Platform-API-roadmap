@@ -275,5 +275,5 @@ func (h *Handler) UpdatePost(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "post not found"})
 		return
 	}
-	c.JSON(http.StatusOK, gin.H{"message": "successfully updated blog!"})
+	c.JSON(http.StatusOK, gin.H{"message": "successfully updated post"})
 }

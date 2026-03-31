@@ -1,7 +1,6 @@
 package integration
 
 import (
-	"blog/auth"
 	"blog/handlers"
 	"blog/models"
 	"blog/router"
@@ -138,14 +137,7 @@ func TestAuthFlow_LoginRefreshMe(t *testing.T) {
 	defer p.Close()
 
 	deleteTestUser(t, p, "maks")
-	HP, err := auth.HashPassword("maksPassWord123")
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	_, err = createTestUser(t, p, "maks", "maks@maks.com", HP)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+	fullCreateUser(t, p)
 	defer deleteTestUser(t, p, "maks")
 
 	r := router.SetupRouter(h)
@@ -217,18 +209,8 @@ func TestAuthFlow_LogoutThenRefreshFails(t *testing.T) {
 	h, p := setupTest(t)
 	defer p.Close()
 	deleteTestUser(t, p, "maks")
-	HP, err := auth.HashPassword("maksPassWord123")
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	id, err := createTestUser(t, p, "maks", "maks@maks.com", HP)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
-	refreshCookie, err := auth.GenerateRefreshJWT(id)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+	defer deleteTestUser(t, p, "maks")
+	_, refreshCookie := fullCreateUser(t, p)
 	r := router.SetupRouter(h)
 
 	// 1.Logout
