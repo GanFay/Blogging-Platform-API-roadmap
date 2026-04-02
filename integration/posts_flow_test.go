@@ -134,9 +134,9 @@ func TestPostsFlow_CreateGetUpdateDelete(t *testing.T) {
 	if w.Code != http.StatusForbidden {
 		t.Fatal("want: ", http.StatusForbidden, "got: ", w.Code, ", body: ", w.Body.String())
 	}
-	respInvalDelete := decodeJSON[map[string]string](t, w)
-	if respInvalDelete["message"] != "not permission" {
-		t.Fatal("want: not permission, get: ", respInvalDelete["message"])
+	respInvalidDelete := decodeJSON[map[string]string](t, w)
+	if respInvalidDelete["message"] != "not permission" {
+		t.Fatal("want: not permission, get: ", respInvalidDelete["message"])
 	}
 	// 6. Delete Success
 	req = httptest.NewRequest(http.MethodDelete, fmt.Sprintf(`/posts/%d`, postID), nil)

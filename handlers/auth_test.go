@@ -386,7 +386,6 @@ func TestLogin_Success(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-
 	if userIDRefreshJWT != id {
 		t.Fatalf("wrong refresh token user id: wantLen %d, got %d", id, userIDRefreshJWT)
 	}
@@ -415,21 +414,51 @@ func TestLogout_Success(t *testing.T) {
 	h, r, pool, id := setupTest(t)
 	defer pool.Close()
 	defer deleteTestUser(t, pool, id)
+
 	r.POST("/auth/logout", h.Logout)
-	setCookie, err := auth.GenerateRefreshJWT(id)
+
+	refreshToken, err := auth.GenerateRefreshJWT(id)
 	if err != nil {
-		t.Fatal(err.Error())
+		t.Fatal(err)
 	}
+
 	req := httptest.NewRequest(http.MethodPost, "/auth/logout", nil)
-	req.Header.Set("Set-Cookie", setCookie)
+	req.AddCookie(&http.Cookie{
+		Name:  "refresh_token",
+		Value: refreshToken,
+	})
+
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	cookies := w.Header()["Set-Cookie"]
-	cookie := cookies[0]
-	cookieParts := strings.Split(cookie, ";")
-	tokenPart := strings.SplitN(cookieParts[0], "=", 2)
-	if tokenPart[1] != "" {
-		t.Fatal("invalid logout", w.Code)
+
+	if w.Code != http.StatusOK {
+		t.Fatal("want:", http.StatusOK, "got:", w.Code, "body:", w.Body.String())
+	}
+
+	respCookies := w.Result().Cookies()
+	if len(respCookies) == 0 {
+		t.Fatal("expected Set-Cookie in response, got none")
+	}
+
+	var refreshCookie *http.Cookie
+	for _, c := range respCookies {
+		if c.Name == "refresh_token" {
+			refreshCookie = c
+			break
+		}
+	}
+
+	if refreshCookie == nil {
+		t.Fatal("refresh_token cookie not found in response")
+	}
+
+	if refreshCookie.Value != "" {
+		t.Fatal("expected empty refresh_token after logout, got:", refreshCookie.Value)
+	}
+
+	// Обычно logout ещё помечает cookie как удалённую
+	if refreshCookie.MaxAge != -1 {
+		t.Log("warning: expected MaxAge = -1, got:", refreshCookie.MaxAge)
 	}
 }
 
@@ -437,16 +466,20 @@ func TestRefresh_NoCookie(t *testing.T) {
 	h, r, pool, id := setupTest(t)
 	defer pool.Close()
 	defer deleteTestUser(t, pool, id)
+
 	r.POST("/auth/refresh", h.Refresh)
+
 	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", nil)
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusUnauthorized {
-		t.Fatal("wantLen status 401, got", w.Code, w.Body.String())
+		t.Fatal("want status 401, got", w.Code, "body:", w.Body.String())
 	}
-	if w.Body.String() != `{"message":"http: named cookie not present"}` {
-		t.Fatal("wantLen no refreshToken, got", w.Body.String())
+
+	resp := decodeJSON[map[string]string](t, w)
+	if resp["message"] != "http: named cookie not present" {
+		t.Fatal("want cookie error, got", resp["message"])
 	}
 }
 
@@ -456,14 +489,18 @@ func TestRefresh_InvalidToken(t *testing.T) {
 	defer deleteTestUser(t, pool, id)
 	r.POST("/auth/refresh", h.Refresh)
 	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", nil)
-	req.Header.Set("Set-Cookie", "invalid")
+	req.AddCookie(&http.Cookie{
+		Name:  "refresh_token",
+		Value: "invalid",
+	})
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 	if w.Code != http.StatusUnauthorized {
 		t.Fatal("wantLen status 401, got", w.Code, w.Body.String())
 	}
-	if w.Body.String() != `{"message":"http: named cookie not present"}` {
-		t.Fatal("wantLen no refreshToken, got", w.Body.String())
+	resp := decodeJSON[map[string]string](t, w)
+	if !strings.Contains(resp["error"], "token is malformed") {
+		t.Fatal("want token is malformed, got", resp["message"])
 	}
 }
 
@@ -478,7 +515,7 @@ func TestRefresh_ExpiredToken(t *testing.T) {
 			"iat":     time.Now().Unix(),
 		}
 		token := jwt.NewWithClaims(jwt.SigningMethodHS256, claims)
-		signedToken, err := token.SignedString(auth.GetAccessSecret())
+		signedToken, err := token.SignedString(auth.GetRefreshSecret())
 		if err != nil {
 			return "", err
 		}
@@ -490,19 +527,21 @@ func TestRefresh_ExpiredToken(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("Cookie", "refresh_token="+RefJWT)
+	req.AddCookie(&http.Cookie{
+		Name:  "refresh_token",
+		Value: RefJWT,
+	})
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
 
 	if w.Code != http.StatusUnauthorized {
 		t.Fatal("wantLen status 401, got", w.Code, w.Body.String())
 	}
-	var resp map[string]string
-	err = json.Unmarshal(w.Body.Bytes(), &resp)
-	if err != nil {
-		t.Fatal(err)
+	resp := decodeJSON[map[string]string](t, w)
+
+	if !strings.Contains(resp["error"], "token is expired") {
+		t.Fatal("want: token is expired, got: ", resp["error"])
 	}
-	t.Log(resp)
 }
 
 func TestRefresh_UserID_NotFound(t *testing.T) {
@@ -527,14 +566,13 @@ func TestRefresh_UserID_NotFound(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req.Header.Set("Cookie", "refresh_token="+refJWT)
+	req.AddCookie(&http.Cookie{
+		Name:  "refresh_token",
+		Value: refJWT,
+	})
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	var resp map[string]string
-	err = json.Unmarshal(w.Body.Bytes(), &resp)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+	resp := decodeJSON[map[string]string](t, w)
 	if w.Code != http.StatusUnauthorized {
 		t.Fatal("wantLen status 401, got", w.Code, w.Body.String())
 	}
@@ -553,14 +591,13 @@ func TestRefresh_Success(t *testing.T) {
 	}
 	r.POST("/auth/refresh", h.Refresh)
 	req := httptest.NewRequest(http.MethodPost, "/auth/refresh", nil)
-	req.Header.Set("Cookie", "refresh_token="+refJWT)
+	req.AddCookie(&http.Cookie{
+		Name:  "refresh_token",
+		Value: refJWT,
+	})
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	var resp map[string]string
-	err = json.Unmarshal(w.Body.Bytes(), &resp)
-	if err != nil {
-		t.Fatal(err.Error())
-	}
+	resp := decodeJSON[map[string]string](t, w)
 	if w.Code != http.StatusOK {
 		t.Fatal("wantLen status 200, got", w.Code, w.Body.String())
 	}

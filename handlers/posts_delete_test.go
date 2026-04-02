@@ -68,7 +68,6 @@ func TestDeletePost(t *testing.T) {
 			}
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, testCase.req)
-			t.Log(w.Body.String())
 			if w.Code != testCase.wantCode {
 				t.Fatal("want: ", testCase.wantCode, "got: ", w.Code)
 			}

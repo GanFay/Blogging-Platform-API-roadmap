@@ -38,7 +38,6 @@ func TestGenerateAccessJWT(t *testing.T) {
 	if userID != parseID {
 		t.Fatal("got: ", parseID, "want: ", userID)
 	}
-	t.Log(got)
 }
 
 func TestGenerateRefreshJWT(t *testing.T) {
@@ -59,7 +58,6 @@ func TestGenerateRefreshJWT(t *testing.T) {
 	if userID != parseID {
 		t.Fatal("got: ", parseID, "want: ", userID)
 	}
-	t.Log(got)
 }
 
 func TestParseAccessJWT_Valid(t *testing.T) {

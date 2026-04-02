@@ -45,7 +45,7 @@ func (h *Handler) Login(c *gin.Context) {
 		return
 	}
 	if !auth.ComparePasswords(user.PasswordHash, req.Password) {
-		c.JSON(401, gin.H{"error": "password error" + err.Error()})
+		c.JSON(401, gin.H{"error": "password wrong"})
 		return
 	}
 
