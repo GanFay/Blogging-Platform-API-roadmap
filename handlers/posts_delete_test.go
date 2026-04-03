@@ -117,10 +117,10 @@ func TestDeletePost_NoAuthor(t *testing.T) {
 	w := httptest.NewRecorder()
 
 	r.ServeHTTP(w, req)
-	var resp map[string]string
-	err = json.Unmarshal(w.Body.Bytes(), &resp)
 	if w.Code != http.StatusForbidden {
+		t.Fatal("want: status 403, got: ", w.Code, ", body: ", w.Body.String())
 	}
+	resp := decodeJSON[map[string]string](t, w)
 	if resp["message"] != "not permission" {
 		t.Fatal("want: not permission, got: ", resp["message"])
 	}

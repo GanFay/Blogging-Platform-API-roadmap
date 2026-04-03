@@ -1,6 +1,10 @@
 package handlers
 
-import "github.com/gin-gonic/gin"
+import (
+	"net/http"
+
+	"github.com/gin-gonic/gin"
+)
 
 // Ping godoc
 // @Summary Ping server
@@ -10,7 +14,7 @@ import "github.com/gin-gonic/gin"
 // @Success 200 {object} map[string]string
 // @Router /ping [get]
 func (h *Handler) Ping(c *gin.Context) {
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"message": "pong",
 	})
 }

@@ -1,7 +1,6 @@
 package handlers
 
 import (
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -14,7 +13,6 @@ func TestPing(t *testing.T) {
 
 	h := &Handler{}
 	r := gin.Default()
-	var body map[string]string
 	r.GET("/ping", h.Ping)
 	req := httptest.NewRequest(http.MethodGet, "/ping", nil)
 	w := httptest.NewRecorder()
@@ -22,11 +20,7 @@ func TestPing(t *testing.T) {
 	if w.Code != http.StatusOK {
 		t.Fatal(w.Code)
 	}
-
-	err := json.Unmarshal([]byte(w.Body.String()), &body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	body := decodeJSON[map[string]string](t, w)
 	if body["message"] != "pong" {
 		t.Fatal("got: ", body["message"], "want: pong")
 	}

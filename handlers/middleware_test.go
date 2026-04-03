@@ -2,7 +2,6 @@ package handlers
 
 import (
 	"blog/auth"
-	"encoding/json"
 	"net/http"
 	"net/http/httptest"
 	"testing"
@@ -42,12 +41,7 @@ func TestAuthMiddleware_InvalidHeaderFormat(t *testing.T) {
 	if w.Code != 401 {
 		t.Fatal(w.Code)
 	}
-	var body map[string]string
-	err = json.Unmarshal([]byte(w.Body.String()), &body)
-	if err != nil {
-		t.Fatal(err)
-	}
-
+	body := decodeJSON[map[string]string](t, w)
 	if body["error"] != "invalid type header" {
 		t.Fatal("got: ", body["error"], "want: invalid type header")
 	}
@@ -62,15 +56,10 @@ func TestAuthMiddleware_InvalidToken(t *testing.T) {
 	req.Header.Set("Authorization", "Bearer invalid_token")
 	w := httptest.NewRecorder()
 	r.ServeHTTP(w, req)
-	var body map[string]string
 	if w.Code != http.StatusUnauthorized {
 		t.Fatal(w.Code)
 	}
-
-	err := json.Unmarshal([]byte(w.Body.String()), &body)
-	if err != nil {
-		t.Fatal(err)
-	}
+	body := decodeJSON[map[string]string](t, w)
 	if body["error"] != "token is malformed: token contains an invalid number of segments" {
 		t.Fatal("got: ", body["error"], "want: invalid token")
 	}

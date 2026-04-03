@@ -1,13 +1,14 @@
 package handlers
 
 import (
-	"github.com/jackc/pgx/v5/pgxpool"
+	"blog/repository"
 )
 
 type Handler struct {
-	DB *pgxpool.Pool
+	Posts *repository.PostRepository
+	Users *repository.UserRepository
 }
 
-func NewHandler(db *pgxpool.Pool) *Handler {
-	return &Handler{DB: db}
+func NewHandler(p *repository.PostRepository, u *repository.UserRepository) *Handler {
+	return &Handler{Posts: p, Users: u}
 }

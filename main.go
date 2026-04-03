@@ -1,7 +1,9 @@
 package main
 
 import (
+	"blog/db"
 	"blog/handlers"
+	"blog/repository"
 	"blog/router"
 	"context"
 	"log"
@@ -9,7 +11,6 @@ import (
 
 	_ "blog/docs"
 
-	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/joho/godotenv"
 )
 
@@ -31,13 +32,10 @@ func main() {
 		log.Fatal("DB_URL is empty")
 	}
 
-	pool, err := pgxpool.New(context.Background(), dbURL)
-	if err != nil {
-		log.Fatal("Failed to connected DB: ", err)
-	}
+	pool := db.MustConnect(dbURL)
 	defer pool.Close()
 
-	_, err = pool.Exec(context.Background(), `
+	_, err := pool.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS posts (
 					id         SERIAL PRIMARY KEY,
 					author_id  TEXT	NOT NULL,
@@ -61,8 +59,10 @@ func main() {
 		log.Fatal("Create table error:", err)
 	}
 	log.Println("Table is ready")
+	postRep := repository.NewPostRepository(pool)
+	userRep := repository.NewUserRepository(pool)
 
-	h := handlers.NewHandler(pool)
+	h := handlers.NewHandler(postRep, userRep)
 	r := router.SetupRouter(h)
 	err = r.Run(":8080")
 	if err != nil {

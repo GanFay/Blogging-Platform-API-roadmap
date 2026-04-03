@@ -159,6 +159,9 @@ func TestUpdateBlog_NotOwner(t *testing.T) {
 	}
 	defer deleteTestUser(t, p, id2)
 	jwt, err := auth.GenerateAccessJWT(id2)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 
 	body := `{
 						"title": "test",

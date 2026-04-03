@@ -18,6 +18,9 @@ func TestGetAllPosts_Validation(t *testing.T) {
 	defer p.Close()
 	defer deleteTestUser(t, p, id)
 	jwt, err := auth.GenerateAccessJWT(id)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
 	strID := strconv.Itoa(id)
 	postsID, err := createBlogH(t, p, strID, 12)
 	if err != nil {

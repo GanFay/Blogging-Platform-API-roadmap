@@ -3,7 +3,6 @@ package handlers
 import (
 	"blog/auth"
 	"blog/models"
-	"log"
 	"net/http"
 	"net/mail"
 
@@ -23,43 +22,42 @@ import (
 // @Failure 500 {object} map[string]string "User does not exist or internal server error"
 // @Router /auth/login [post]
 func (h *Handler) Login(c *gin.Context) {
+	ctx := c.Request.Context()
 	var req models.Login
-	var user models.Users
+
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	if len(req.Username) < 4 || len(req.Username) > 32 {
-		c.JSON(400, gin.H{"error": "username is too short or too long"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "username is too short or too long"})
 		return
 	} else if len(req.Password) < 5 || len(req.Password) > 128 {
-		c.JSON(400, gin.H{"error": "password is too short or too long"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password is too short or too long"})
 		return
 	}
-	err = h.DB.QueryRow(c.Request.Context(), `SELECT * FROM users WHERE username=$1`, req.Username).Scan(
-		&user.ID, &user.Username, &user.Email, &user.PasswordHash, &user.CreatedAt)
+	user, err := h.Users.GetByUserName(ctx, req.Username)
 	if err != nil {
-		log.Println(err)
-		c.JSON(500, gin.H{"error": "user does not exist"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 	if !auth.ComparePasswords(user.PasswordHash, req.Password) {
-		c.JSON(401, gin.H{"error": "password wrong"})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": "password wrong"})
 		return
 	}
 
 	var AccessToken string
 	AccessToken, err = auth.GenerateAccessJWT(user.ID)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
 	var RefreshToken string
 	RefreshToken, err = auth.GenerateRefreshJWT(user.ID)
 	if err != nil {
-		c.JSON(500, gin.H{"error": err.Error()})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -73,7 +71,7 @@ func (h *Handler) Login(c *gin.Context) {
 		true,
 	)
 
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"userId":       user.ID,
 		"access_token": AccessToken,
 	})
@@ -90,46 +88,44 @@ func (h *Handler) Login(c *gin.Context) {
 // @Failure 400 {object} map[string]string "Validation error or insert error"
 // @Router /auth/register [post]
 func (h *Handler) Register(c *gin.Context) {
+	ctx := c.Request.Context()
 	var req models.RegisterRequest
 	err := c.ShouldBindJSON(&req)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error() + "awda"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	if len(req.Username) < 4 || len(req.Username) > 32 {
-		c.JSON(400, gin.H{"error": "username must be between 4 and 32 characters"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "username must be between 4 and 32 characters"})
 		return
 	}
 
 	if len(req.Password) < 5 || len(req.Password) > 128 {
-		c.JSON(400, gin.H{"error": "password must be between 5 and 128 characters"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "password must be between 5 and 128 characters"})
 		return
 	}
 
 	if len(req.Email) < 6 || len(req.Email) > 256 {
-		c.JSON(400, gin.H{"error": "email must be between 6 and 256 characters"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "email must be between 6 and 256 characters"})
 		return
 	}
 
 	_, err = mail.ParseAddress(req.Email)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error() + "222"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
 	hashPassword, err := auth.HashPassword(req.Password)
 	if err != nil {
-		c.JSON(400, gin.H{"error": err.Error() + "333"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
-	_, err = h.DB.Exec(c.Request.Context(), `
-		INSERT INTO users (username, email, password_hash)
-		VALUES ($1, $2, $3)
-	`, req.Username, req.Email, hashPassword)
+	err = h.Users.Add(ctx, req.Username, req.Email, hashPassword)
 	if err != nil {
-		c.JSON(409, gin.H{"error": err.Error() + "444"})
+		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"message": "register successfully"})
@@ -148,19 +144,19 @@ func (h *Handler) Refresh(c *gin.Context) {
 
 	refreshToken, err := c.Cookie("refresh_token")
 	if err != nil {
-		c.JSON(401, gin.H{"message": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"message": err.Error()})
 		return
 	}
 
 	userID, err := auth.ParseJWTRefresh(refreshToken)
 	if err != nil {
-		c.JSON(401, gin.H{"error": err.Error()})
+		c.JSON(http.StatusUnauthorized, gin.H{"error": err.Error()})
 		return
 	}
 
 	access, _ := auth.GenerateAccessJWT(userID)
 
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"access_token": access,
 	})
 
@@ -184,7 +180,7 @@ func (h *Handler) Logout(c *gin.Context) {
 		false,
 		true,
 	)
-	c.JSON(200, gin.H{
+	c.JSON(http.StatusOK, gin.H{
 		"message": "logged out",
 	})
 }

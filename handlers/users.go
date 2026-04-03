@@ -1,14 +1,10 @@
 package handlers
 
 import (
+	"net/http"
+
 	"github.com/gin-gonic/gin"
 )
-
-type info struct {
-	Id       int    `json:"id"`
-	Username string `json:"username"`
-	Email    string `json:"email"`
-}
 
 // Me godoc
 // @Summary Get current user
@@ -21,16 +17,15 @@ type info struct {
 // @Failure 400 {object} map[string]string "Database error"
 // @Router /users/me [get]
 func (h *Handler) Me(c *gin.Context) {
-	var req info
+	ctx := c.Request.Context()
 	userID := c.GetInt("user_id")
 
-	err := h.DB.QueryRow(c.Request.Context(), `SELECT id, username, email FROM users WHERE id=$1`, userID).Scan(&req.Id, &req.Username, &req.Email)
+	req, err := h.Users.GetByID(ctx, userID)
 	if err != nil {
-		c.JSON(400, gin.H{
-			"message": err.Error(),
-		})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	c.JSON(200, gin.H{"id": req.Id, "username": req.Username, "email": req.Email})
+
+	c.JSON(200, gin.H{"id": req.ID, "username": req.Username, "email": req.Email})
 
 }

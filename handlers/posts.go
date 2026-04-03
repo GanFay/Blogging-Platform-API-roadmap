@@ -2,13 +2,10 @@ package handlers
 
 import (
 	"blog/models"
-	"log"
 	"net/http"
 	"strconv"
-	"time"
 
 	"github.com/gin-gonic/gin"
-	"github.com/jackc/pgx/v5"
 )
 
 // CreatePost GoDoc
@@ -25,6 +22,7 @@ import (
 // @Failure 500 {object} map[string]string "Failed to create blog"
 // @Router /posts [post]
 func (h *Handler) CreatePost(c *gin.Context) {
+	ctx := c.Request.Context()
 	var newBlog models.Blog
 	err := c.ShouldBindJSON(&newBlog)
 	if err != nil {
@@ -46,12 +44,9 @@ func (h *Handler) CreatePost(c *gin.Context) {
 		return
 	}
 
-	_, err = h.DB.Exec(c.Request.Context(), `
-		INSERT INTO posts (author_id, title, content, category, tags)
-		VALUES ($1, $2, $3, $4, $5)
-	`, userIdStr, newBlog.Title, newBlog.Content, newBlog.Category, newBlog.Tags)
+	err = h.Posts.Create(ctx, userIdStr, newBlog.Title, newBlog.Content, newBlog.Category, newBlog.Tags)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": "failed to write in DB"})
+		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
 
@@ -72,12 +67,8 @@ func (h *Handler) CreatePost(c *gin.Context) {
 // @Failure 500 {object} map[string]string "Server error"
 // @Router /posts [get]
 func (h *Handler) GetPosts(c *gin.Context) {
+	ctx := c.Request.Context()
 	term := c.Query("term")
-
-	var (
-		rows pgx.Rows
-		err  error
-	)
 
 	limit := c.DefaultQuery("limit", "10")
 	offset := c.DefaultQuery("offset", "0")
@@ -91,41 +82,11 @@ func (h *Handler) GetPosts(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "limit is too big"})
 		return
 	}
-
-	if term != "" {
-		rows, err = h.DB.Query(c.Request.Context(), `
-			SELECT id, author_id, title, content, category, tags, created_at, updated_at
-			FROM posts
-			WHERE
-				title ILIKE '%' || $1 || '%'
-				OR content ILIKE '%' || $1 || '%'
-				OR category ILIKE '%' || $1 || '%'
-			ORDER BY created_at DESC
-			LIMIT $2 OFFSET $3;
-		`, term, limit, offset)
-	} else {
-		rows, err = h.DB.Query(c.Request.Context(), `SELECT posts.* FROM posts ORDER BY created_at DESC LIMIT $1 OFFSET $2;`, limit, offset)
-	}
-
+	posts, err := h.Posts.GetAll(ctx, term, limit, offset)
 	if err != nil {
-		c.JSON(400, gin.H{"message": err.Error()})
-		return
-	}
-	defer rows.Close()
-	var posts []models.Post
-	for rows.Next() {
-		var p models.Post
-		if err := rows.Scan(&p.ID, &p.AuthorID, &p.Title, &p.Content, &p.Category, &p.Tags, &p.CreatedAt, &p.UpdatedAt); err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-			return
-		}
-		posts = append(posts, p)
-	}
-	if err := rows.Err(); err != nil {
 		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 		return
 	}
-
 	c.JSON(http.StatusOK, gin.H{"posts": posts})
 }
 
@@ -140,21 +101,19 @@ func (h *Handler) GetPosts(c *gin.Context) {
 // @Failure 400 {object} map[string]string "Invalid post ID"
 // @Router /posts/{id} [get]
 func (h *Handler) GetByID(c *gin.Context) {
+	ctx := c.Request.Context()
 	idStr := c.Param("id")
 	id, err := strconv.Atoi(idStr)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id: " + idStr})
 		return
 	}
-	var post models.Post
-	var posts []models.Post
-	err = h.DB.QueryRow(c.Request.Context(), `SELECT * FROM posts WHERE id=$1`, id).Scan(&post.ID, &post.AuthorID, &post.Title, &post.Content, &post.Category, &post.Tags, &post.CreatedAt, &post.UpdatedAt)
+	post, err := h.Posts.GetByID(ctx, id)
 	if err != nil {
-		c.JSON(404, gin.H{"error": "user not found: " + idStr})
+		c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 		return
 	}
-	posts = append(posts, post)
-	c.JSON(http.StatusOK, gin.H{"posts": posts})
+	c.JSON(http.StatusOK, gin.H{"post": post})
 }
 
 // DeletePost GoDoc
@@ -171,46 +130,33 @@ func (h *Handler) GetByID(c *gin.Context) {
 // @Failure 404 {object} map[string]string "Post not found"
 // @Router /posts/{id} [delete]
 func (h *Handler) DeletePost(c *gin.Context) {
-
+	ctx := c.Request.Context()
 	userID, exists := c.Get("user_id")
 	if !exists {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id not found"})
 		return
 	}
-	var post models.Post
 	id := c.Param("id")
 	idInt, err := strconv.Atoi(id)
 	if err != nil {
-		c.JSON(400, gin.H{"error": "invalid id: " + id})
+		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id: " + id})
 		return
 	}
-	err = h.DB.QueryRow(c.Request.Context(), `SELECT * FROM posts WHERE id=$1`, idInt).Scan(&post.ID, &post.AuthorID, &post.Title, &post.Content, &post.Category, &post.Tags, &post.CreatedAt, &post.UpdatedAt)
+	err = h.Posts.Delete(ctx, idInt, userID.(int))
 	if err != nil {
-		log.Println(err)
-		c.JSON(400, gin.H{"error": err.Error()})
-		return
+		switch err.Error() {
+		case "not permission":
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		case "post not found":
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 	}
-	authorID, err := strconv.Atoi(post.AuthorID)
-	if err != nil {
-		return
-	}
-	if authorID != userID.(int) {
-		c.JSON(http.StatusForbidden, gin.H{"message": "not permission"})
-		return
-	}
-
-	cmdTag, err := h.DB.Exec(c.Request.Context(), `DELETE FROM posts WHERE id=$1`, id)
-	if err != nil {
-		c.JSON(404, gin.H{"error": err.Error()})
-		return
-	}
-
-	if cmdTag.RowsAffected() == 0 {
-		c.JSON(http.StatusNotFound, gin.H{"message": "post not found"})
-		return
-	}
-
-	c.JSON(204, gin.H{"message": "deleted post successfully"})
+	c.JSON(http.StatusNoContent, gin.H{"message": "post deleted successfully"})
 }
 
 // UpdatePost GoDoc
@@ -227,6 +173,7 @@ func (h *Handler) DeletePost(c *gin.Context) {
 // @Failure 401 {object} map[string]string "Unauthorized or no permission"
 // @Router /posts/{id} [put]
 func (h *Handler) UpdatePost(c *gin.Context) {
+	ctx := c.Request.Context()
 	idStr := c.Param("id")
 	userID, exists := c.Get("user_id")
 	if !exists {
@@ -238,42 +185,25 @@ func (h *Handler) UpdatePost(c *gin.Context) {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid id " + idStr})
 		return
 	}
-	var post models.Post
-	err = h.DB.QueryRow(c.Request.Context(), `SELECT * FROM posts WHERE id=$1`, id).Scan(&post.ID, &post.AuthorID, &post.Title, &post.Content, &post.Category, &post.Tags, &post.CreatedAt, &post.UpdatedAt)
-	if err != nil {
-		log.Println(err)
-		c.JSON(400, gin.H{"error": err.Error()})
-		return
-	}
-
-	AtoI, err := strconv.Atoi(post.AuthorID)
-	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "invalid author id: " + post.AuthorID})
-		return
-	}
-
-	if AtoI != userID {
-		c.JSON(http.StatusForbidden, gin.H{"message": "not permission"})
-		return
-	}
-
 	var newBlog models.Blog
 	err = c.ShouldBindJSON(&newBlog)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
 	}
-	timeNow := time.Now()
-
-	cmdTag, err := h.DB.Exec(c.Request.Context(), `
-	UPDATE posts SET title=$1, content=$2, category=$3, tags=$4, updated_at=$6 WHERE id=$5`, newBlog.Title, newBlog.Content, newBlog.Category, newBlog.Tags, id, timeNow)
+	err = h.Posts.Update(ctx, id, userID.(int), newBlog)
 	if err != nil {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "failed to update post: " + err.Error()})
-		return
-	}
-	if cmdTag.RowsAffected() == 0 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "post not found"})
-		return
+		switch err.Error() {
+		case "not permission":
+			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
+			return
+		case "post not found":
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		default:
+			c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+			return
+		}
 	}
 	c.JSON(http.StatusOK, gin.H{"message": "successfully updated post"})
 }
