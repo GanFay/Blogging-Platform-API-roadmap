@@ -90,7 +90,7 @@ func TestUpdatePosts_Valid(t *testing.T) {
 				return httptest.NewRequest(http.MethodPut, "/posts/2147483647", strings.NewReader(body))
 			},
 			wantBodyErr: "no rows in result set",
-			wantCode:    http.StatusBadRequest,
+			wantCode:    http.StatusNotFound,
 			auth:        true,
 		},
 		{
@@ -133,7 +133,7 @@ func TestUpdatePosts_Valid(t *testing.T) {
 					t.Fatal("want: \"", testCase.wantBodyErr, "\", got: ", resp["error"])
 				}
 				if w.Code != testCase.wantCode {
-					t.Fatal("want: ", testCase.wantCode, ", got: ", w.Code)
+					t.Fatal("want: ", testCase.wantCode, ", got: ", w.Code, "body: ", w.Body.String())
 				}
 			}
 		})
@@ -153,7 +153,7 @@ func TestUpdateBlog_NotOwner(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	id2, err := createTestUser(t, p, "user", "user", HP)
+	id2, err := createTestUser(t, h, "user", "user", HP)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -183,7 +183,7 @@ func TestUpdateBlog_NotOwner(t *testing.T) {
 	if w.Code != http.StatusForbidden {
 		t.Fatal("got: ", w.Code, ", want: ", http.StatusForbidden)
 	}
-	if resp["message"] != "not permission" {
-		t.Fatal("got: ", resp["message"], ", want: 'not permission'")
+	if resp["error"] != "not permission" {
+		t.Fatal("got: ", resp["error"], ", want: 'not permission'")
 	}
 }

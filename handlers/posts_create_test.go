@@ -182,7 +182,7 @@ func TestCreateBlog_Success(t *testing.T) {
 	if resp["message"] != want {
 		t.Fatal("want: ", want, ", got: ", resp["message"])
 	}
-	_, err = h.DB.Exec(context.Background(), `DELETE FROM posts WHERE title=$1`, "Test")
+	_, err = pool.Exec(context.Background(), `DELETE FROM posts WHERE title=$1`, "Test")
 	if err != nil {
 		t.Fatal(err.Error())
 	}

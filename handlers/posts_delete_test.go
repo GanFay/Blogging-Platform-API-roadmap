@@ -50,7 +50,7 @@ func TestDeletePost(t *testing.T) {
 			name:        "PostNotFound",
 			req:         httptest.NewRequest(http.MethodDelete, `/posts/2147483647`, nil),
 			wantBodyErr: "no rows in result set",
-			wantCode:    http.StatusBadRequest,
+			wantCode:    http.StatusNotFound,
 			auth:        true,
 		},
 		{
@@ -69,7 +69,7 @@ func TestDeletePost(t *testing.T) {
 			w := httptest.NewRecorder()
 			r.ServeHTTP(w, testCase.req)
 			if w.Code != testCase.wantCode {
-				t.Fatal("want: ", testCase.wantCode, "got: ", w.Code)
+				t.Fatal("want: ", testCase.wantCode, "got: ", w.Code, "body: ", w.Body.String())
 			}
 
 			switch testCase.wantBodyErr {
@@ -101,7 +101,7 @@ func TestDeletePost_NoAuthor(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	id2, err := createTestUser(t, p, "test", "test", HP)
+	id2, err := createTestUser(t, h, "test", "test", HP)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -121,7 +121,7 @@ func TestDeletePost_NoAuthor(t *testing.T) {
 		t.Fatal("want: status 403, got: ", w.Code, ", body: ", w.Body.String())
 	}
 	resp := decodeJSON[map[string]string](t, w)
-	if resp["message"] != "not permission" {
-		t.Fatal("want: not permission, got: ", resp["message"])
+	if resp["error"] != "not permission" {
+		t.Fatal("want: not permission, got: ", resp["error"])
 	}
 }

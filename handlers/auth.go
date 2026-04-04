@@ -125,7 +125,7 @@ func (h *Handler) Register(c *gin.Context) {
 
 	err = h.Users.Add(ctx, req.Username, req.Email, hashPassword)
 	if err != nil {
-		c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+		c.JSON(http.StatusConflict, gin.H{"error": err.Error()})
 		return
 	}
 	c.JSON(http.StatusCreated, gin.H{"message": "register successfully"})

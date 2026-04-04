@@ -4,7 +4,6 @@ import (
 	"blog/models"
 	"context"
 	"errors"
-	"log"
 	"strconv"
 	"time"
 
@@ -69,7 +68,6 @@ func (r *PostRepository) Delete(ctx context.Context, id int, userID int) error {
 	var post models.Post
 	err := r.db.QueryRow(ctx, `SELECT * FROM posts WHERE id=$1`, id).Scan(&post.ID, &post.AuthorID, &post.Title, &post.Content, &post.Category, &post.Tags, &post.CreatedAt, &post.UpdatedAt)
 	if err != nil {
-		log.Println(err)
 		return err
 	}
 	authorID, err := strconv.Atoi(post.AuthorID)

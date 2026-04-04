@@ -56,7 +56,7 @@ func GenerateRefreshJWT(userID int) (string, error) {
 	return signedToken, nil
 }
 
-func parseJWT(signedToken string, secret string) (int, error) {
+func parseJWT(signedToken string, secret []byte) (int, error) {
 	token, err := jwt.Parse(signedToken, func(token *jwt.Token) (interface{}, error) {
 		if _, ok := token.Method.(*jwt.SigningMethodHMAC); !ok {
 			return nil, fmt.Errorf("unexpected signing method: %v", token.Header["alg"])
@@ -89,9 +89,9 @@ func parseJWT(signedToken string, secret string) (int, error) {
 }
 
 func ParseJWTAccess(signedToken string) (int, error) {
-	return parseJWT(signedToken, string(GetAccessSecret()))
+	return parseJWT(signedToken, GetAccessSecret())
 }
 
 func ParseJWTRefresh(signedToken string) (int, error) {
-	return parseJWT(signedToken, string(GetRefreshSecret()))
+	return parseJWT(signedToken, GetRefreshSecret())
 }

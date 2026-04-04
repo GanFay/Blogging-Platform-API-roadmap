@@ -3,7 +3,6 @@ package handlers
 import (
 	"blog/auth"
 	"blog/models"
-	"encoding/json"
 	"fmt"
 	"net/http"
 	"net/http/httptest"
@@ -16,7 +15,7 @@ import (
 func TestGetAllPosts_Validation(t *testing.T) {
 	_, _, p, id := setupTest(t)
 	defer p.Close()
-	defer deleteTestUser(t, p, id)
+	deleteTestUser(t, p, id)
 	jwt, err := auth.GenerateAccessJWT(id)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -32,29 +31,16 @@ func TestGetAllPosts_Validation(t *testing.T) {
 		name        string
 		req         func(r *gin.Engine, h *Handler)
 		reqTest     *http.Request
-		wantLen     int
 		wantBodyErr string
 		wantCode    int
 		auth        bool
 	}{
-		{
-			name: "DefaultPagination",
-			req: func(r *gin.Engine, h *Handler) {
-				r.GET(`/posts`, h.AuthMiddleware(), h.GetPosts)
-			},
-			reqTest:     httptest.NewRequest(http.MethodGet, "/posts", nil),
-			wantLen:     10,
-			wantBodyErr: "",
-			wantCode:    http.StatusOK,
-			auth:        true,
-		},
 		{
 			name: "WithSearchTerm",
 			req: func(r *gin.Engine, h *Handler) {
 				r.GET(`/posts`, h.AuthMiddleware(), h.GetPosts)
 			},
 			reqTest:     httptest.NewRequest(http.MethodGet, `/posts?term=title`, nil),
-			wantLen:     -1,
 			wantBodyErr: "",
 			wantCode:    http.StatusOK,
 			auth:        true,
@@ -65,7 +51,6 @@ func TestGetAllPosts_Validation(t *testing.T) {
 				r.GET(`/posts`, h.AuthMiddleware(), h.GetPosts)
 			},
 			reqTest:     httptest.NewRequest(http.MethodGet, "/posts?limit=1000", nil),
-			wantLen:     -1,
 			wantBodyErr: "limit is too big",
 			wantCode:    http.StatusBadRequest,
 			auth:        true,
@@ -76,7 +61,6 @@ func TestGetAllPosts_Validation(t *testing.T) {
 				r.GET(`/posts`, h.AuthMiddleware(), h.GetPosts)
 			},
 			reqTest:     httptest.NewRequest(http.MethodGet, "/posts?limit=qwerty12345", nil),
-			wantLen:     -1,
 			wantBodyErr: "limit must be int",
 			wantCode:    http.StatusBadRequest,
 			auth:        true,
@@ -87,7 +71,6 @@ func TestGetAllPosts_Validation(t *testing.T) {
 				r.GET(`/posts`, h.AuthMiddleware(), h.GetPosts)
 			},
 			reqTest:     httptest.NewRequest(http.MethodGet, "/posts?offset=qwerty12345", nil),
-			wantLen:     -1,
 			wantBodyErr: "ERROR: invalid input syntax for type bigint: \"qwerty12345\" (SQLSTATE 22P02)",
 			wantCode:    500,
 			auth:        true,
@@ -98,7 +81,6 @@ func TestGetAllPosts_Validation(t *testing.T) {
 				r.GET(`/posts`, h.AuthMiddleware(), h.GetPosts)
 			},
 			reqTest:     httptest.NewRequest(http.MethodGet, "/posts?offset=99999999", nil),
-			wantLen:     0,
 			wantBodyErr: "",
 			wantCode:    http.StatusOK,
 			auth:        true,
@@ -109,21 +91,9 @@ func TestGetAllPosts_Validation(t *testing.T) {
 				r.GET(`/posts`, h.AuthMiddleware(), h.GetPosts)
 			},
 			reqTest:     httptest.NewRequest(http.MethodGet, "/posts", nil),
-			wantLen:     -1,
 			wantBodyErr: "missing authorization header",
 			wantCode:    http.StatusUnauthorized,
 			auth:        false,
-		},
-		{
-			name: "ID_Success",
-			req: func(r *gin.Engine, h *Handler) {
-				r.GET(`/posts/:id`, h.AuthMiddleware(), h.GetByID)
-			},
-			reqTest:     httptest.NewRequest(http.MethodGet, fmt.Sprintf("/posts/%d", postsID[0]), nil),
-			wantLen:     -1,
-			wantBodyErr: "",
-			wantCode:    http.StatusOK,
-			auth:        true,
 		},
 		{
 			name: "ID_Invalid_ID",
@@ -131,7 +101,6 @@ func TestGetAllPosts_Validation(t *testing.T) {
 				r.GET(`/posts/:id`, h.AuthMiddleware(), h.GetByID)
 			},
 			reqTest:     httptest.NewRequest(http.MethodGet, fmt.Sprintf("/posts/%f", 9.5), nil),
-			wantLen:     -1,
 			wantBodyErr: fmt.Sprintf(`invalid id: %f`, 9.5),
 			wantCode:    http.StatusBadRequest,
 			auth:        true,
@@ -142,45 +111,85 @@ func TestGetAllPosts_Validation(t *testing.T) {
 				r.GET(`/posts/:id`, h.AuthMiddleware(), h.GetByID)
 			},
 			reqTest:     httptest.NewRequest(http.MethodGet, fmt.Sprintf("/posts/%d", 2147483647), nil),
-			wantLen:     -1,
-			wantBodyErr: fmt.Sprintf(`user not found: %d`, 2147483647),
+			wantBodyErr: `no rows in result set`,
 			wantCode:    http.StatusNotFound,
 			auth:        true,
 		},
 	}
 	for _, testCase := range testTable {
 		t.Run(testCase.name, func(t *testing.T) {
-			h, r, _, id2 := setupTest(t)
-			deleteTestUser(t, p, id2)
+			h, r, _, id := setupTest(t)
+			defer deleteTestUser(t, p, id)
 			testCase.req(r, h)
 			w := httptest.NewRecorder()
 			if testCase.auth {
 				testCase.reqTest.Header.Set("Authorization", "Bearer "+jwt)
 			}
 			r.ServeHTTP(w, testCase.reqTest)
-			if testCase.wantBodyErr == "" && testCase.wantLen != 0 {
-				var posts map[string][]models.Post
-				err = json.Unmarshal(w.Body.Bytes(), &posts)
-				if len(posts["posts"]) != testCase.wantLen && testCase.wantLen != -1 {
-					t.Fatal("wrong pagination len")
-
-				}
-			} else {
-				var posts map[string]string
-				err = json.Unmarshal(w.Body.Bytes(), &posts)
-				if posts["error"] != testCase.wantBodyErr {
-
-					t.Fatal("wrong error body", w.Code, posts, testCase.wantBodyErr)
-				}
-			}
-			if err != nil {
-				t.Fatal(err.Error())
-			}
 			if w.Code != testCase.wantCode {
-				t.Fatal("want: ", testCase.wantCode, ", got: ", w.Code)
+				t.Fatal("want: ", testCase.wantCode, "got: ", w.Code, "body: ", w.Body.String())
 			}
-
+			if testCase.wantBodyErr != "" {
+				resp := decodeJSON[map[string]string](t, w)
+				if resp["error"] != testCase.wantBodyErr {
+					t.Fatal("want: ", testCase.wantBodyErr, "got: ", resp["error"])
+				}
+			}
 		})
 
+	}
+}
+
+func TestGetAll_DefPagination(t *testing.T) {
+	h, r, p, id := setupTest(t)
+	defer p.Close()
+	defer deleteTestUser(t, p, id)
+	r.GET(`/posts`, h.AuthMiddleware(), h.GetPosts)
+	IDs, err := createBlogH(t, p, strconv.Itoa(id), 12)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	defer deletePostsH(t, p, IDs)
+	jwt, err := auth.GenerateAccessJWT(id)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	req := httptest.NewRequest(http.MethodGet, `/posts`, nil)
+	req.Header.Add("Authorization", "Bearer "+jwt)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatal("want: ", http.StatusOK, "got: ", w.Code, "body: ", w.Body.String())
+	}
+	resp := decodeJSON[map[string][]models.Post](t, w)
+	if len(resp["posts"]) != 10 {
+		t.Fatal("want: ", 10, ", got: ", len(resp["posts"]))
+	}
+}
+
+func TestByID_Success(t *testing.T) {
+	h, r, p, id := setupTest(t)
+	defer p.Close()
+	defer deleteTestUser(t, p, id)
+	r.GET(`/posts/:id`, h.AuthMiddleware(), h.GetByID)
+	IDs, err := createBlogH(t, p, strconv.Itoa(id), 1)
+	defer deletePostsH(t, p, IDs)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	jwt, err := auth.GenerateAccessJWT(id)
+	if err != nil {
+		t.Fatal(err.Error())
+	}
+	req := httptest.NewRequest(http.MethodGet, fmt.Sprintf("/posts/%d", IDs[0]), nil)
+	req.Header.Set("Authorization", "Bearer "+jwt)
+	w := httptest.NewRecorder()
+	r.ServeHTTP(w, req)
+	if w.Code != http.StatusOK {
+		t.Fatal("want: ", http.StatusOK, "got: ", w.Code, "body: ", w.Body.String())
+	}
+	post := decodeJSON[map[string]models.Post](t, w)
+	if post["post"].ID != int64(IDs[0]) && post["post"].AuthorID != strconv.Itoa(id) {
+		t.Fatal("wrong body")
 	}
 }

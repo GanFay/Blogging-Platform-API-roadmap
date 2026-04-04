@@ -148,6 +148,9 @@ func (h *Handler) DeletePost(c *gin.Context) {
 		case "not permission":
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 			return
+		case "no rows in result set":
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
 		case "post not found":
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
@@ -198,6 +201,9 @@ func (h *Handler) UpdatePost(c *gin.Context) {
 			c.JSON(http.StatusForbidden, gin.H{"error": err.Error()})
 			return
 		case "post not found":
+			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
+			return
+		case "no rows in result set":
 			c.JSON(http.StatusNotFound, gin.H{"error": err.Error()})
 			return
 		default:

@@ -122,8 +122,8 @@ func TestPostsFlow_CreateGetUpdateDelete(t *testing.T) {
 		t.Fatal("want: ", http.StatusOK, "got: ", w.Code, ", body: ", w.Body.String())
 	}
 	respInvalidUPD := decodeJSON[map[string]string](t, w)
-	if respInvalidUPD["message"] != "not permission" {
-		t.Fatal("want: not permission, get: ", respInvalidUPD["message"])
+	if respInvalidUPD["error"] != "not permission" {
+		t.Fatal("want: not permission, get: ", respInvalidUPD["error"])
 	}
 	// 5. Try to delete (another user)
 	req = httptest.NewRequest(http.MethodDelete, fmt.Sprintf(`/posts/%d`, postID), nil)
@@ -135,8 +135,8 @@ func TestPostsFlow_CreateGetUpdateDelete(t *testing.T) {
 		t.Fatal("want: ", http.StatusForbidden, "got: ", w.Code, ", body: ", w.Body.String())
 	}
 	respInvalidDelete := decodeJSON[map[string]string](t, w)
-	if respInvalidDelete["message"] != "not permission" {
-		t.Fatal("want: not permission, get: ", respInvalidDelete["message"])
+	if respInvalidDelete["error"] != "not permission" {
+		t.Fatal("want: not permission, get: ", respInvalidDelete["error"])
 	}
 	// 6. Delete Success
 	req = httptest.NewRequest(http.MethodDelete, fmt.Sprintf(`/posts/%d`, postID), nil)

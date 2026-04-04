@@ -3,6 +3,7 @@ package integration
 import (
 	"blog/handlers"
 	"blog/models"
+	"blog/repository"
 	"blog/router"
 	"context"
 	"encoding/json"
@@ -22,7 +23,9 @@ func setupTest(t *testing.T) (*handlers.Handler, *pgxpool.Pool) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	h := &handlers.Handler{DB: pool}
+	pRep := repository.NewPostRepository(pool)
+	uRep := repository.NewUserRepository(pool)
+	h := handlers.NewHandler(pRep, uRep)
 
 	return h, pool
 }

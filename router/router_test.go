@@ -2,6 +2,7 @@ package router_test
 
 import (
 	"blog/handlers"
+	"blog/repository"
 	"blog/router"
 	"context"
 	"net/http"
@@ -23,7 +24,9 @@ func setupTest(t *testing.T) (*handlers.Handler, *pgxpool.Pool) {
 	}
 
 	gin.SetMode(gin.TestMode)
-	h := &handlers.Handler{DB: pool}
+	pRep := repository.NewPostRepository(pool)
+	uRep := repository.NewUserRepository(pool)
+	h := handlers.NewHandler(pRep, uRep)
 
 	return h, pool
 }

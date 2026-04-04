@@ -3,6 +3,7 @@ package handlers
 import (
 	"blog/auth"
 	"blog/models"
+	"blog/repository"
 	"context"
 	"encoding/json"
 	"fmt"
@@ -22,7 +23,6 @@ type errorResponse struct {
 }
 
 // TODO: optimize setupTest - don't create user for tests that don't need it
-// TODO: fix all test where have - cookie (usually in refreshTests)
 
 func setupTest(t *testing.T) (*Handler, *gin.Engine, *pgxpool.Pool, int) {
 	t.Helper()
@@ -34,7 +34,9 @@ func setupTest(t *testing.T) (*Handler, *gin.Engine, *pgxpool.Pool, int) {
 	}
 
 	gin.SetMode(gin.TestMode)
-	h := &Handler{DB: pool}
+	postRep := repository.NewPostRepository(pool)
+	userRep := repository.NewUserRepository(pool)
+	h := NewHandler(postRep, userRep)
 	r := gin.Default()
 
 	pass, err := auth.HashPassword("testout123")
@@ -45,7 +47,10 @@ func setupTest(t *testing.T) (*Handler, *gin.Engine, *pgxpool.Pool, int) {
 	username := "test_logout"
 	email := "test_logout@gmail.com"
 
-	id, _ := createTestUser(t, pool, username, email, pass)
+	id, err := createTestUser(t, h, username, email, pass)
+	if err != nil {
+		t.Fatal(err)
+	}
 
 	return h, r, pool, id
 }
@@ -72,19 +77,15 @@ func decodeJSON[T any](t *testing.T, w *httptest.ResponseRecorder) T {
 	return v
 }
 
-func createTestUser(t *testing.T, pool *pgxpool.Pool, username, email, passwordHash string) (int, error) {
+func createTestUser(t *testing.T, h *Handler, username, email, passwordHash string) (int, error) {
 	t.Helper()
 
-	var id int
-	err := pool.QueryRow(
-		context.Background(),
-		`INSERT INTO users (username, email, password_hash)
-		 VALUES ($1, $2, $3)
-		 RETURNING id`,
-		username, email, passwordHash,
-	).Scan(&id)
-
-	return id, err
+	err := h.Users.Add(context.Background(), username, email, passwordHash)
+	if err != nil {
+		t.Fatal(err)
+	}
+	user, err := h.Users.GetByUserName(context.Background(), username)
+	return user.ID, err
 }
 
 func deleteTestUser(t *testing.T, pool *pgxpool.Pool, id int) {
@@ -216,7 +217,7 @@ func TestRegister_UserAlreadyExists(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	id, err = createTestUser(t, pool, username, email, passwordHash)
+	id, err = createTestUser(t, h, username, email, passwordHash)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -266,16 +267,12 @@ func TestRegister_Success(t *testing.T) {
 		t.Fatalf("wantLen status %d, got %d, body: %s", http.StatusCreated, w.Code, w.Body.String())
 	}
 
-	var userID int
-	err := h.DB.QueryRow(
-		context.Background(),
-		"SELECT id FROM users WHERE username = $1",
-		username,
-	).Scan(&userID)
+	user, err := h.Users.GetByUserName(context.Background(), username)
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer deleteTestUser(t, pool, userID)
+
+	defer deleteTestUser(t, pool, user.ID)
 }
 
 func TestLogin_Validation(t *testing.T) {
@@ -354,7 +351,7 @@ func TestLogin_Success(t *testing.T) {
 	}`, username, password)
 
 	w := performJSONRequest(r, http.MethodPost, "/auth/login", body)
-
+	t.Log(id)
 	if w.Code != http.StatusOK {
 		t.Fatalf("status %d, got %d, body: %s", http.StatusOK, w.Code, w.Body.String())
 	}
@@ -367,7 +364,7 @@ func TestLogin_Success(t *testing.T) {
 	}
 
 	if userIDAccessJWT != id {
-		t.Fatalf("wrong access token user id: wantLen %d, got %d", id, userIDAccessJWT)
+		t.Fatalf("wrong access token user id: want %d, got %d", id, userIDAccessJWT)
 	}
 
 	cookies := w.Header()["Set-Cookie"]

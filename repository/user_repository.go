@@ -29,7 +29,7 @@ func (r *UserRepository) GetByUserName(ctx context.Context, username string) (mo
 
 func (r *UserRepository) GetByID(ctx context.Context, id int) (models.MeResponse, error) {
 	var req models.MeResponse
-	err := r.db.QueryRow(ctx, `SELECT id, username, email FROM users WHERE id=$1`, id).Scan(&req.Username, &req.ID, &req.Email)
+	err := r.db.QueryRow(ctx, `SELECT id, username, email FROM users WHERE id=$1`, id).Scan(&req.ID, &req.Username, &req.Email)
 	return req, err
 }
 
