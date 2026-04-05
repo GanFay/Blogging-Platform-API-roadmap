@@ -4,7 +4,6 @@ import (
 	"blog/models"
 	"context"
 	"errors"
-	"strconv"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -19,7 +18,7 @@ func NewPostRepository(db *pgxpool.Pool) *PostRepository {
 	return &PostRepository{db: db}
 }
 
-func (r *PostRepository) Create(ctx context.Context, authorId string, title string, content string, category string, tags []string) error {
+func (r *PostRepository) Create(ctx context.Context, authorId int, title string, content string, category string, tags []string) error {
 	_, err := r.db.Exec(ctx, `INSERT INTO posts (author_id, title, content, category, tags) VALUES ($1, $2, $3, $4, $5)`, authorId, title, content, category, tags)
 	return err
 }
@@ -70,12 +69,8 @@ func (r *PostRepository) Delete(ctx context.Context, id int, userID int) error {
 	if err != nil {
 		return err
 	}
-	authorID, err := strconv.Atoi(post.AuthorID)
-	if err != nil {
-		err = errors.New("invalid authorID in DB")
-		return err
-	}
-	if authorID != userID {
+
+	if post.AuthorID != userID {
 		err = errors.New("not permission")
 		return err
 	}
@@ -98,13 +93,7 @@ func (r *PostRepository) Update(ctx context.Context, id int, userID int, newBlog
 		return err
 	}
 
-	AtoI, err := strconv.Atoi(post.AuthorID)
-	if err != nil {
-		err = errors.New("invalid authorID in DB")
-		return err
-	}
-
-	if AtoI != userID {
+	if post.AuthorID != userID {
 		err = errors.New("not permission")
 		return err
 	}

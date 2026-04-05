@@ -38,7 +38,7 @@ func main() {
 	_, err := pool.Exec(context.Background(), `
 		CREATE TABLE IF NOT EXISTS posts (
 					id         SERIAL PRIMARY KEY,
-					author_id  TEXT	NOT NULL,
+					author_id  INT	NOT NULL,
 					title      TEXT UNIQUE NOT NULL,
 					content    TEXT        NOT NULL,
 					category   TEXT,

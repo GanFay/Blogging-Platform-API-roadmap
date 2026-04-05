@@ -13,7 +13,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 )
 
-func createBlogH(t *testing.T, pool *pgxpool.Pool, authorID string, n int) ([]int, error) {
+func createBlogH(t *testing.T, pool *pgxpool.Pool, authorID int, n int) ([]int, error) {
 	t.Helper()
 
 	var postsID []int

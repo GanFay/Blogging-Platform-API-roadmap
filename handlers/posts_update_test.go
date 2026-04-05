@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"strings"
 	"testing"
 )
@@ -15,7 +14,7 @@ func TestUpdatePosts_Valid(t *testing.T) {
 	h, r, p, id := setupTest(t)
 	defer p.Close()
 	defer deleteTestUser(t, p, id)
-	IDs, err := createBlogH(t, p, strconv.Itoa(id), 3)
+	IDs, err := createBlogH(t, p, id, 3)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -144,7 +143,7 @@ func TestUpdateBlog_NotOwner(t *testing.T) {
 	h, r, p, id := setupTest(t)
 	defer p.Close()
 	defer deleteTestUser(t, p, id)
-	IDs, err := createBlogH(t, p, strconv.Itoa(id), 1)
+	IDs, err := createBlogH(t, p, id, 1)
 	if err != nil {
 		t.Fatal(err.Error())
 	}

@@ -6,7 +6,6 @@ import (
 	"fmt"
 	"net/http"
 	"net/http/httptest"
-	"strconv"
 	"testing"
 
 	"github.com/gin-gonic/gin"
@@ -20,8 +19,7 @@ func TestGetAllPosts_Validation(t *testing.T) {
 	if err != nil {
 		t.Fatal(err.Error())
 	}
-	strID := strconv.Itoa(id)
-	postsID, err := createBlogH(t, p, strID, 12)
+	postsID, err := createBlogH(t, p, id, 12)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -145,7 +143,7 @@ func TestGetAll_DefPagination(t *testing.T) {
 	defer p.Close()
 	defer deleteTestUser(t, p, id)
 	r.GET(`/posts`, h.AuthMiddleware(), h.GetPosts)
-	IDs, err := createBlogH(t, p, strconv.Itoa(id), 12)
+	IDs, err := createBlogH(t, p, id, 12)
 	if err != nil {
 		t.Fatal(err.Error())
 	}
@@ -172,7 +170,7 @@ func TestByID_Success(t *testing.T) {
 	defer p.Close()
 	defer deleteTestUser(t, p, id)
 	r.GET(`/posts/:id`, h.AuthMiddleware(), h.GetByID)
-	IDs, err := createBlogH(t, p, strconv.Itoa(id), 1)
+	IDs, err := createBlogH(t, p, id, 1)
 	defer deletePostsH(t, p, IDs)
 	if err != nil {
 		t.Fatal(err.Error())
@@ -189,7 +187,7 @@ func TestByID_Success(t *testing.T) {
 		t.Fatal("want: ", http.StatusOK, "got: ", w.Code, "body: ", w.Body.String())
 	}
 	post := decodeJSON[map[string]models.Post](t, w)
-	if post["post"].ID != int64(IDs[0]) && post["post"].AuthorID != strconv.Itoa(id) {
+	if post["post"].ID != int64(IDs[0]) && post["post"].AuthorID != id {
 		t.Fatal("wrong body")
 	}
 }

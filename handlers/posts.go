@@ -34,7 +34,6 @@ func (h *Handler) CreatePost(c *gin.Context) {
 		c.JSON(http.StatusUnauthorized, gin.H{"error": "user_id not found, unauthorized"})
 		return
 	}
-	userIdStr := strconv.Itoa(userID.(int))
 	if len(newBlog.Title) < 3 || len(newBlog.Title) > 50 {
 		c.JSON(http.StatusBadRequest, gin.H{"error": "Incorrect title. It must be between 3 and 50 characters long."})
 		return
@@ -44,7 +43,7 @@ func (h *Handler) CreatePost(c *gin.Context) {
 		return
 	}
 
-	err = h.Posts.Create(ctx, userIdStr, newBlog.Title, newBlog.Content, newBlog.Category, newBlog.Tags)
+	err = h.Posts.Create(ctx, userID.(int), newBlog.Title, newBlog.Content, newBlog.Category, newBlog.Tags)
 	if err != nil {
 		c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 		return
