@@ -5,7 +5,6 @@ import (
 	"blog/handlers"
 	"blog/repository"
 	"blog/router"
-	"context"
 	"log"
 	"os"
 
@@ -35,36 +34,12 @@ func main() {
 	pool := db.MustConnect(dbURL)
 	defer pool.Close()
 
-	_, err := pool.Exec(context.Background(), `
-		CREATE TABLE IF NOT EXISTS posts (
-					id         SERIAL PRIMARY KEY,
-					author_id  INT	NOT NULL,
-					title      TEXT UNIQUE NOT NULL,
-					content    TEXT        NOT NULL,
-					category   TEXT,
-					tags TEXT[],
-					created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
-		    		updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-				);
-		CREATE TABLE IF NOT EXISTS users (
-		    id         SERIAL PRIMARY KEY,
-		    username   TEXT UNIQUE NOT NULL,
-		    email      TEXT UNIQUE NOT NULL,
-		    password_hash TEXT NOT NULL,
-		    created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
-		);			
-`)
-
-	if err != nil {
-		log.Fatal("Create table error:", err)
-	}
-	log.Println("Table is ready")
 	postRep := repository.NewPostRepository(pool)
 	userRep := repository.NewUserRepository(pool)
 
 	h := handlers.NewHandler(postRep, userRep)
 	r := router.SetupRouter(h)
-	err = r.Run(":8080")
+	err := r.Run(":8080")
 	if err != nil {
 		return
 	}

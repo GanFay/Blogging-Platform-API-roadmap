@@ -158,7 +158,7 @@ func (h *Handler) DeletePost(c *gin.Context) {
 			return
 		}
 	}
-	c.JSON(http.StatusNoContent, gin.H{"message": "post deleted successfully"})
+	c.Status(204)
 }
 
 // UpdatePost GoDoc
